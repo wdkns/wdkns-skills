@@ -1,3 +1,5 @@
+[English](./README.md) | [简体中文](./README_CN.md)
+
 # LLM Note Generator
 
 这是一个用于将课程幻灯片 (PDF) 和配套讲课字幕 (TXT) 半自动化转换为专业的 LaTeX 课程笔记的工具集。通过自动提取、转换并构建包含严格模板约束的 Prompt，帮助您利用大语言模型 (如 Gemini, ChatGPT) 快速生成高质量的结构化笔记。

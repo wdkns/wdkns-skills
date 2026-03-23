@@ -1,3 +1,5 @@
+[English](./README.md) | [简体中文](./README_CN.md)
+
 # LLM Note Generator
 
 A toolset designed to semi-automatically convert course presentation slides (PDF) and their corresponding lecture subtitles (TXT) into professional LaTeX course notes. By automatically extracting, converting, and building a strictly templated Prompt, this tool helps you leverage Large Language Models (like Gemini, ChatGPT) to quickly generate high-quality, structured notes.
