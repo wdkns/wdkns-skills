@@ -224,4 +224,4 @@ Deliver all of the following:
 
 ## Asset
 
-- `assets/notes-template.tex`: default LaTeX template to copy and fill (shared with youtube-render-pdf)
+- `assets/notes-template.tex`: default LaTeX template to copy and fill
