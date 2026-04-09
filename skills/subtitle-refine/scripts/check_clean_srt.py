@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 import re
 from pathlib import Path
 
-from merge_clean_srt import FILLER_ONLY_RE, PUNCT_RE, parse_srt
+TIME_RE = re.compile(
+    r"(?P<sh>\d{2}):(?P<sm>\d{2}):(?P<ss>\d{2}),(?P<sms>\d{3})\s*-->\s*"
+    r"(?P<eh>\d{2}):(?P<em>\d{2}):(?P<es>\d{2}),(?P<ems>\d{3})"
+)
+PUNCT_RE = re.compile(r"[，。！？；：、“”‘’（）《》〈〉【】〔〕—…,.!?;:'\"()\[\]{}<>/\\-]")
+FILLER_ONLY_RE = re.compile(r"^[嗯啊呃哈欸诶唉哎哦额恩]+$")
 
 
 FILLER_CHARS = "嗯啊呃哈欸诶唉哎哦额恩"
@@ -12,6 +18,7 @@ SHORT_STUTTER_CHARS = "我你他她它这那哪有很都也就再会想要去来
 FILLER_EDGE_RE = re.compile(rf"^(?:[{FILLER_CHARS}]{{1,2}}).+|.+(?:[{FILLER_CHARS}]{{1,2}})$")
 SUFFIX_PAUSE_RE = re.compile(r"(?<! )(是吧|对吧|对吗|行吧|行吗|是不是|对不对)$")
 PREFIX_PAUSE_RE = re.compile(r"^(来)(?=[那你我他她它咱先就吧呢啊呀])")
+LATIN_WORD_RE = re.compile(r"[A-Za-z0-9]+|[^\sA-Za-z0-9]")
 VALID_AA_PREFIXES = {
     "爸爸",
     "妈妈",
@@ -39,8 +46,55 @@ VALID_AA_PREFIXES = {
 EDGE_FILLER_CHARS = FILLER_CHARS + "呀"
 
 
+@dataclass
+class Entry:
+    block_id: str
+    start_ms: int
+    end_ms: int
+    text: str
+
+
+def parse_time(value: str) -> tuple[int, int]:
+    match = TIME_RE.fullmatch(value.strip())
+    if not match:
+        raise ValueError(f"bad time line: {value!r}")
+
+    def pack(prefix: str) -> int:
+        hour = int(match.group(f"{prefix}h"))
+        minute = int(match.group(f"{prefix}m"))
+        second = int(match.group(f"{prefix}s"))
+        milli = int(match.group(f"{prefix}ms"))
+        return (((hour * 60) + minute) * 60 + second) * 1000 + milli
+
+    return pack("s"), pack("e")
+
+
+def parse_srt(path: Path) -> list[Entry]:
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return []
+
+    blocks = [block.strip() for block in re.split(r"\n\s*\n", text) if block.strip()]
+    entries: list[Entry] = []
+    for block in blocks:
+        lines = [line.rstrip() for line in block.splitlines()]
+        if len(lines) < 3:
+            raise ValueError(f"{path}: malformed block: {block!r}")
+        block_id = lines[0].strip()
+        start_ms, end_ms = parse_time(lines[1].strip())
+        text_line = " ".join(line.strip() for line in lines[2:]).strip()
+        entries.append(Entry(block_id=block_id, start_ms=start_ms, end_ms=end_ms, text=text_line))
+    return entries
+
+
 def compact_text(text: str) -> str:
     return text.replace(" ", "")
+
+
+def visible_length(text: str, latin_word_as_one_char: bool) -> int:
+    if latin_word_as_one_char:
+        return len(LATIN_WORD_RE.findall(text))
+    return len(compact_text(text))
 
 
 def parse_allowed_deletions(value: str) -> set[int]:
@@ -194,6 +248,11 @@ def main() -> int:
         action="store_true",
         help="Return a non-zero exit code when heuristic warnings are found",
     )
+    parser.add_argument(
+        "--latin-word-as-one-char",
+        action="store_true",
+        help="Count each contiguous Latin alnum token as one visible character for length checks",
+    )
     args = parser.parse_args()
 
     raw_entries = parse_srt(args.raw_srt)
@@ -211,7 +270,7 @@ def main() -> int:
             issues.append(f"{entry.block_id}: multiline text")
         if PUNCT_RE.search(text):
             issues.append(f"{entry.block_id}: punctuation remains in {text!r}")
-        if len(text.replace(" ", "")) > 14:
+        if visible_length(text, args.latin_word_as_one_char) > 14:
             issues.append(f"{entry.block_id}: text longer than 14 chars in {text!r}")
         if entry.end_ms < entry.start_ms:
             issues.append(f"{entry.block_id}: negative duration")
