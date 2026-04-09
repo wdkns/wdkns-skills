@@ -1,0 +1,7 @@
+interface:
+  display_name: "字幕精修"
+  short_description: "按上线要求执行中文SRT字幕精修清洗校验与时间轴复核流程"
+  default_prompt: "使用 $subtitle-refine 对这个中文 SRT 字幕文件做精修、合并与校验。"
+
+policy:
+  allow_implicit_invocation: true
