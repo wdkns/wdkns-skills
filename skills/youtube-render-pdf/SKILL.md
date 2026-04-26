@@ -49,9 +49,14 @@ The notes must read like a strong human teacher is guiding the reader through th
    Prefer the default language that best matches the video or the user's requested language.
    Fall back to the closest available subtitle track only when needed.
    Preserve the subtitle timestamps; do not flatten subtitles into plain text too early if figures still need to be located.
+   If no usable platform subtitle exists, extract audio and transcribe it into a timestamped subtitle file before writing.
+   Use the best speech-to-text tool available in the current environment, and prefer a reusable local model cache when one exists.
+   If the local model is missing or incomplete, prefer downloading it with ModelScope when available before transcription.
+   For final subtitles, prefer a higher-quality model over a tiny or rough transcription model when the content is technical or terminology-heavy.
+   Use visual-only mode only when both subtitles and speech-to-text are unavailable or too poor; rely on dense frame sampling plus direct visual inspection.
 
 5. Keep all source artifacts local when practical.
-   Typical working artifacts are metadata, the downloaded cover image, a timestamped subtitle file, optional cleaned transcript text, a local video file, and extracted frames.
+   Typical working artifacts are metadata, the downloaded cover image, a timestamped subtitle file (platform or speech-to-text generated), optional cleaned transcript text, a local video file, and extracted frames.
 
 ## Long Video Strategy
 
