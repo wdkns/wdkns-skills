@@ -1,0 +1,4 @@
+interface:
+  display_name: "Douyin Render PDF"
+  short_description: "Turn a Douyin long-form lecture into a structured LaTeX/PDF note set."
+  default_prompt: "Use this skill to turn a Douyin long-form video into a high-quality LaTeX course note with clear pedagogical motivation and logic, support for Douyin long links, short links, share links, and jingxuan modal links, browser-cookie assisted extraction when needed, page RENDER_DATA fallback, Whisper transcription when structured subtitles are unavailable, inspected and cropped key frames, the original cover on the front page, and a final synthesis chapter."
