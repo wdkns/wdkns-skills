@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tensor Formula Viz"
+  short_description: "Visualize tensor formulas with shapes and dimensions"
+  default_prompt: "Use $tensor-formula-viz to turn this tensor formula or code into a clean shape-aware block visualization."
