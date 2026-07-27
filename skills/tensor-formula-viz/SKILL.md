@@ -114,6 +114,7 @@ For sharded matrix multiplication, expand the block algebra in both the top form
 - For illustrative dense tensors, use two or three non-periodic lightness levels. Do not generate checkerboards, regular stripes, or symmetric motifs unless they encode real structure.
 - Center the symbol immediately below each block and its shape on the next line.
 - Use one full-width, low-contrast bottom box with one reading column and at most three fixed-label rows: **Axes** for dimension meanings, **Objects** for semantic kind/domain/range, and **Mechanism** for at most two essential mappings, contractions, broadcasts, or boundaries; localize these labels to the figure language. Use a narrow bold label rail, left-aligned ragged-right `\small` content, \(8\)–\(10\) pt inner padding, and \(0.4\)–\(0.6\) em row gaps. Keep each row compact; prioritize symbol semantics over numeric configuration or secondary commentary, and remove content instead of adding cards, columns, or smaller type.
+- Place one centered identification line below the bottom meaning box, outside the box, in low-contrast neutral gray and `\scriptsize` or smaller. Format it as `<concise visualization subject>@五道口纳什`, replacing the angle-bracketed placeholder with what the figure visualizes and omitting the literal angle brackets; keep it on one line with a small but visible vertical gap. Example: `TP-FFN（GeLU + All-Reduce）@五道口纳什`.
 - Avoid charts or metric insets not present in the primary formula, decorative pills, banners, shadows, repeated separators, and explanatory cards.
 - Keep illustrative cell counts visually consistent; state once that they show axis structure rather than literal dimensions without weakening the mandatory geometry invariants.
 - For Chinese figures, use concise Chinese labels with standard English terms where helpful.
@@ -136,7 +137,7 @@ Before delivery:
 4. Verify block multiplication, broadcasting, reductions, and sharding algebra.
 5. Render to PNG and visually inspect the latest output.
 6. At full size, audit every bounding box, gutter, stack extent, connector route, and layer for forbidden intersection, tangency, clipping, or occlusion.
-7. Check the compact top, row-wise algebraic stages, symbol/shape alignment, natural crop, three-row bottom box, and exact structural support. At thumbnail size, audit hue count and reuse, muted base colors, active-level separation, neutral borders, and non-periodic texture against the house style or supplied reference.
+7. Check the compact top, row-wise algebraic stages, symbol/shape alignment, natural crop, three-row bottom box, centered identification line, and exact structural support. Confirm that the identification line names the actual visualization, stays outside the meaning box, and is neither clipped nor visually dominant. At thumbnail size, audit hue count and reuse, muted base colors, active-level separation, neutral borders, and non-periodic texture against the house style or supplied reference.
 8. Reject and redraw any figure that violates a mandatory semantic, geometry, or layout invariant.
 9. Deliver the preview, a short mechanism explanation, and links to editable/vector artifacts.
 
