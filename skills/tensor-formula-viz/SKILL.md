@@ -14,9 +14,9 @@ Turn a formula or tensor-code path into one dense, slide-ready figure with three
 ## Workflow
 
 1. Reduce the input to one primary computation path. Omit equivalent objectives, diagnostics, and secondary metrics unless requested.
-2. Build a shape ledger: symbol/code name, global and local shape, axis meanings, shape-equivalence class, and contracted/broadcast/reduced axes.
+2. Build a shape-and-semantics ledger: symbol/code name, semantic kind, dtype/domain, global and local shape, axis meanings, range when meaningful, shape-equivalence class, producer/consumer, and contracted/broadcast/reduced axes.
 3. Choose the smallest visual grammar that exposes the mechanism.
-4. Draw the three-zone layout.
+4. Reserve non-overlapping stage lanes and object bounding boxes, then draw the three-zone layout.
 5. Render, inspect, and correct both mathematical and visual alignment.
 
 For code input, trace concrete `matmul`, `einsum`, `reshape/view`, `transpose/permute`, concat, broadcast, and collective operations. Preserve code variable names when useful; state any inferred shapes or conventions.
@@ -49,6 +49,16 @@ Combine grammars only when each adds information. Cell variation may give dense 
 - Make transpose, broadcast, reduction, reshape, split, and concat axis order explicit.
 - Treat colors as semantics: keep one color per tensor role, head, or TP rank throughout the figure.
 
+## Symbol semantics and discrete objects
+
+- Classify every non-obvious symbol as value, score/logit, probability, index/coordinate, rank/order, count, ID, mask/support, permutation, or shape parameter. State its dtype/domain and what one entry means; shape alone is insufficient.
+- Give one block one semantic object. Never merge a score, index list, and mask under a label such as \(M/S\); show each conversion with an explicit operator and arrow.
+- For selection or routing, close the full chain: continuous scores \(\rightarrow\) discrete indices/IDs \(\rightarrow\) gather, scatter, mask, or route \(\rightarrow\) selected values. Distinguish `TopKValues` from `TopKIndices`; if both are used, show both outputs.
+- Define index notation and range at first use, for example \(S_t=(s_{t,1},\ldots,s_{t,k})\), \(s_{t,r}\in\{0,\ldots,t\}\). Distinguish source-position axis \(s\) from selected-slot/rank axis \(r\), and state whether ordering, duplicates, padding, or variable cardinality matter.
+- Show the address mapping once, such as \(G[b,t,r,:]=X[b,S[b,t,r],:]\). If a mask is also shown, state \(M[b,t,s]=\mathbf 1[s\in S_{b,t}]\); do not imply that the integer index tensor and Boolean mask are the same object.
+- Visualize integer indices as ordered slots, position labels, or gather lines; visualize masks as binary structural support; visualize scores and values as magnitude color blocks. Do not render all three with the same heatmap grammar.
+- When indices are shared across heads, ranks, or branches, draw the shared selector once and mark the broadcast/reuse axes explicitly.
+
 ## Mandatory geometry invariants
 
 - Map every matrix face \(a\times b\) to height \(a\) and width \(b\). For batched or stacked tensors, use the last two matrix axes for the face and leading axes only for depth or repeated panels.
@@ -58,6 +68,15 @@ Combine grammars only when each adds information. Cell variation may give dense 
 - Preserve partition geometry. Explicit shards tile their parent exactly along the split axis; equal shards have equal size; concatenation reverses the split. Size concatenated parts from their declared shapes—Q/K/V are equal segments only when their output shapes are equal. If intermediate shards are elided, show an ellipsis and never stretch the visible shards to impersonate the full parent.
 - Change geometry at an explicit reshape, flatten, transpose, split, or concat operator only. State axis identities such as \((h/p)d_h=d/p\); do not silently reuse one generic rectangle before and after an axis change.
 - Illustrative cell counts need not match real tensor dimensions, but they never waive equal-shape, square, transpose, contraction, or partition invariants.
+
+## Mandatory layout invariants
+
+- Treat every tensor, full offset stack, bracket, operator, arrow label, annotation, symbol, shape label, stage heading, and meaning box as a bounding box. Define one base gutter \(g\geq1\,\mathrm{em}\); keep unrelated boxes at least \(g\) apart and stage bands at least \(1.5g\) apart. Tangency counts as collision.
+- Allow overlap only inside one declared composite: tiles within their matrix, shards tiling a parent, outline sheets in one stack, a bracket around its tensor, or a connector endpoint on its source/target border. Forbid every other intersection or occlusion.
+- Reserve separate vertical lanes for the stage heading, connector annotations, tensor/operator row, symbols, and shapes. Put explanatory prose in the stage subtitle, bottom box, or above its connector; never insert a floating commentary card between operands unless it is a real operation node.
+- Route connectors on a background layer, tensors and operators on the main layer, and text on a foreground layer. A connector may not cross a non-endpoint box; a label's white underlay may cover only its own connector, never a tensor or other label.
+- Include all offset sheets in a stack's bounding box. Use outline-only or very light back sheets with no hidden semantic content; if slices need individual reading, use separate panels instead of overlap.
+- When content does not fit, shorten or remove secondary annotation, widen the natural crop, increase row spacing, or move the whole stage to another row—in that order. Never solve crowding by shrinking below the type hierarchy, compressing the gutter, or covering another object.
 
 For sharded matrix multiplication, expand the block algebra in both the top formula and the relevant middle panel:
 
@@ -94,7 +113,7 @@ For sharded matrix multiplication, expand the block algebra in both the top form
 - Maintain visible contrast through lightness separation, not maximum saturation. Reserve white or near-white for zero/absence and use at least three separated active levels when values vary; `role!30`, `role!55`, and `role!80` are practical defaults. Do not render all data cells with `role!5`–`role!15` pastel fills.
 - For illustrative dense tensors, use two or three non-periodic lightness levels. Do not generate checkerboards, regular stripes, or symmetric motifs unless they encode real structure.
 - Center the symbol immediately below each block and its shape on the next line.
-- Use one full-width, low-contrast bottom box with one left-aligned column. Explain axis meanings plus at most two essential contraction, broadcast, reduction, or reshape facts. Remove content instead of shrinking below `\small`.
+- Use one full-width, low-contrast bottom box with one reading column and at most three fixed-label rows: **Axes** for dimension meanings, **Objects** for semantic kind/domain/range, and **Mechanism** for at most two essential mappings, contractions, broadcasts, or boundaries; localize these labels to the figure language. Use a narrow bold label rail, left-aligned ragged-right `\small` content, \(8\)–\(10\) pt inner padding, and \(0.4\)–\(0.6\) em row gaps. Keep each row compact; prioritize symbol semantics over numeric configuration or secondary commentary, and remove content instead of adding cards, columns, or smaller type.
 - Avoid charts or metric insets not present in the primary formula, decorative pills, banners, shadows, repeated separators, and explanatory cards.
 - Keep illustrative cell counts visually consistent; state once that they show axis structure rather than literal dimensions without weakening the mandatory geometry invariants.
 - For Chinese figures, use concise Chinese labels with standard English terms where helpful.
@@ -112,11 +131,13 @@ Do not select OS-specific CJK fonts by default. Override Fandol only when the us
 Before delivery:
 
 1. Recompute every shape independently.
-2. Audit the geometry ledger: equal-shape bounding boxes, square and transpose faces, contracted edge lengths, and split/concat conservation.
-3. Verify block multiplication, broadcasting, reductions, and sharding algebra.
-4. Render to PNG and visually inspect the latest output.
-5. Check the compact top, row-wise algebraic stages, symbol/shape alignment, natural crop, single-column bottom box, and exact structural support. At thumbnail size, audit hue count and reuse, muted base colors, active-level separation, neutral borders, and non-periodic texture against the house style or supplied reference.
-6. Reject and redraw any figure that violates a mandatory geometry invariant; then fix overlap, clipping, cramped labels, and unreadable glyphs.
-7. Deliver the preview, a short mechanism explanation, and links to editable/vector artifacts.
+2. Audit the semantics ledger: every discrete or overloaded symbol has one type/domain/range, distinct score/index/mask objects, and a closed producer-to-consumer mapping.
+3. Audit the geometry ledger: equal-shape bounding boxes, square and transpose faces, contracted edge lengths, and split/concat conservation.
+4. Verify block multiplication, broadcasting, reductions, and sharding algebra.
+5. Render to PNG and visually inspect the latest output.
+6. At full size, audit every bounding box, gutter, stack extent, connector route, and layer for forbidden intersection, tangency, clipping, or occlusion.
+7. Check the compact top, row-wise algebraic stages, symbol/shape alignment, natural crop, three-row bottom box, and exact structural support. At thumbnail size, audit hue count and reuse, muted base colors, active-level separation, neutral borders, and non-periodic texture against the house style or supplied reference.
+8. Reject and redraw any figure that violates a mandatory semantic, geometry, or layout invariant.
+9. Deliver the preview, a short mechanism explanation, and links to editable/vector artifacts.
 
 Do not deliver a figure that is only syntactically valid; require both mathematical correctness and clean visual alignment.
