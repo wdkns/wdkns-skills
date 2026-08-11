@@ -1,13 +1,22 @@
 ---
 name: bilibili-render-pdf
-description: Generate a professional, detailed, figure-rich LaTeX course note and final PDF from a Bilibili lecture, tutorial, or technical talk. Use when the user provides a Bilibili URL (BV number) and wants structured Chinese teaching notes that combine the video's title, chapters, diagrams, formulas, code, subtitle explanations, the original video cover on the front page, and a final synthesis chapter, with key frames extracted from the highest usable video resolution and inserted as figures, and where the final deliverable must include a rendered PDF. Falls back to Whisper speech-to-text when no CC subtitles are available.
+description: Generate a professional, detailed, figure-rich course note from a Bilibili lecture, tutorial, or technical talk. Supports two output formats: LaTeX→PDF (default) and Markdown. Use when the user provides a Bilibili URL (BV number) and wants structured Chinese teaching notes that combine the video's title, chapters, diagrams, formulas, code, subtitle explanations, the original video cover on the front page, and a final synthesis chapter, with key frames extracted from the highest usable video resolution and inserted as figures. Falls back to Whisper speech-to-text when no CC subtitles are available.
 ---
 
 # Bilibili Render PDF
 
-Use this skill to turn a Bilibili video into a complete, compileable `.tex` note and a rendered PDF.
+Use this skill to turn a Bilibili video into a complete, structured course note.
 
 This skill extends the `youtube-render-pdf` workflow with Bilibili-specific adaptations for subtitle scarcity, login-gated high resolution, multi-part (分P) videos, and platform-specific non-teaching content.
+
+## Output Format Selection
+
+This skill supports two output formats. Choose based on user request or context:
+
+- **LaTeX → PDF** (default): Use when the user wants a PDF, or does not specify a format. Produces a compileable `.tex` file and a rendered `.pdf`.
+- **Markdown**: Use when the user explicitly asks for Markdown / MD notes, or when a LaTeX toolchain is unavailable. Produces a self-contained `.md` file with embedded images.
+
+When the user does not specify, default to LaTeX → PDF.
 
 ## Bilibili vs YouTube: Key Differences
 
@@ -26,12 +35,30 @@ Produce a professional Chinese lecture note from a Bilibili URL.
 The output must:
 
 - use the video's actual teaching content rather than subtitle transcription alone
-- place the video's original cover image on the front page of the `.tex` and rendered PDF whenever available
+- place the video's original cover image on the front page whenever available
 - include all necessary high-value key frames as figures, without adding redundant screenshots
 - end with a final synthesis section that includes the speaker's substantive closing discussion and your own distilled takeaways
-- be structurally organized with `\section{...}` and `\subsection{...}`
+- be structurally organized into clear sections and subsections
+
+### LaTeX-specific requirements (when LaTeX mode is selected)
+
 - be a complete `.tex` document from `\documentclass` to `\end{document}`
+- use `\section{...}` and `\subsection{...}` for structure
 - be compiled successfully to PDF as part of the final delivery
+
+### Markdown-specific requirements (when Markdown mode is selected)
+
+- be a complete, self-contained `.md` file
+- use `##` for sections and `###` for subsections
+- include a YAML frontmatter block with video metadata (title, author, date, channel, URL, cover path)
+- use Markdown image syntax `![alt](path)` for all figures
+- use `> **💡 核心概念**` blockquotes for importantbox-equivalent content
+- use `> **📖 背景知识**` blockquotes for knowledgebox-equivalent content
+- use `> **⚠️ 注意**` blockquotes for warningbox-equivalent content
+- use `> **💬 原始对话（时间区间）**` blockquotes for dialoguebox-equivalent content
+- use `$...$` for display math
+- use fenced code blocks with language tags for code
+- record figure time provenance as a caption line below each image, e.g. `*视频画面时间区间：00:12:31--00:12:46*`
 
 ## Pedagogical Standard
 
@@ -70,9 +97,15 @@ yt-dlp --write-subs --sub-langs "zh-Hans,zh-CN,zh,ai-zh" --convert-subs srt \
 
 Extract audio first, then transcribe with Whisper to produce a timestamped SRT file.
 
+If `whisper` is not on the system PATH, try the Box venv path:
+
 ```
-yt-dlp -x --audio-format wav -o "audio.%(ext)s" "<URL>"
+# Try system PATH first
 whisper audio.wav --model medium --language zh --output_format srt --output_dir .
+
+# If not found, use the full path (Box venv on macOS)
+"/Users/$USER/Library/Application Support/Box/boxenv/bin/whisper" \
+  audio.wav --model medium --language zh --output_format srt --output_dir .
 ```
 
 **Priority 3: Visual-only mode (when audio quality is too poor)**
@@ -139,7 +172,9 @@ Keep the speaker's closing discussion when it carries actual teaching value, suc
    Do not use vague or overly abstract phrasing.
    Ground claims in concrete mechanisms, examples, variables, steps, observed phenomena, timestamps, figures, or speaker-provided evidence whenever possible.
 
-3. Start from `assets/notes-template.tex`.
+3. Start from the appropriate template:
+   - LaTeX mode: copy `assets/notes-template.tex`
+   - Markdown mode: copy `assets/notes-template.md`
    Fill in the metadata block, including the local cover image path, and replace the body content block with the generated notes.
 
 4. The front page must include the video's original cover image when available.
@@ -151,43 +186,49 @@ Keep the speaker's closing discussion when it carries actual teaching value, suc
    Do not optimize for a small figure count; optimize for explanatory coverage and readability.
    Good figures are key formulas, diagrams, tables, plots, visual comparisons, pipeline schedules, architecture views, and stage-by-stage visual progressions.
 
-6. Do not place images inside custom message boxes.
+6. Do not place images inside custom message boxes (LaTeX) or blockquote callouts (Markdown).
 
 7. When a mathematical formula appears:
    first explain in plain Chinese what the formula is trying to express and why it appears
-   show it in display math using `$$...$$`
+   show it in display math using `$...$`
    then immediately follow with a flat list that explains every symbol
 
 8. When code examples appear:
    explain the role of the code before the listing and summarize the expected behavior after it when useful
-   wrap them in `lstlisting`
-   include a descriptive `caption`
+   - LaTeX mode: wrap them in `lstlisting` with a descriptive `caption`
+   - Markdown mode: use fenced code blocks with a language tag, preceded by a brief intro paragraph
 
 9. Highlight teaching signals deliberately and repeatedly when the content justifies it:
-   use `importantbox` for core concepts the reader must walk away with, including formal definitions, central claims, key mechanism summaries, theorem-like statements, critical algorithm steps, and compact restatements of the main idea after a dense explanation
-   use `knowledgebox` for background and side knowledge that improves understanding without being the main thread, including prerequisite reminders, historical lineage, engineering context, design tradeoffs, terminology comparisons, and intuition-building analogies
-   use `warningbox` for common misunderstandings and failure points, including notation overload, hidden assumptions, misleading heuristics, easy-to-make implementation mistakes, causal confusions, off-by-one style reasoning errors, and places where the speaker contrasts a wrong intuition with the correct one
-   use `dialoguebox` only for conversation-heavy videos when a brief original dialogue segment is high-information, funny, vivid, or especially intuitive, and preserving the speaker's wording gives the reader a stronger sense of being present in the discussion
-   a `dialoguebox` may contain either one exchange or several tightly connected turns, such as a question, follow-up, pushback, clarification, and answer sequence
-   keep `dialoguebox` snippets short: preserve speaker labels and a concrete timestamp or interval, lightly clean obvious ASR errors only when confident, and follow the box with prose that explains why the dialogue segment matters
-   do not use `dialoguebox` for greetings, filler, long transcript dumps, or dialogue that would be clearer as ordinary summarized exposition
-   there is no quota of one box per section; add multiple boxes in a section when the material contains multiple distinct teaching signals
-   each box should carry a specific pedagogical payload rather than generic emphasis
-   prefer placing a box immediately after the paragraph, derivation, or example that motivates it
-   routine exposition should stay in normal prose; boxes are for high-signal takeaways, not decoration
-   figures must stay outside `importantbox`, `knowledgebox`, `warningbox`, and `dialoguebox`
+   - LaTeX mode: use `importantbox`, `knowledgebox`, `warningbox`, `dialoguebox` custom boxes
+   - Markdown mode: use blockquote callouts:
+     - `> **💡 核心概念**` for importantbox-equivalent content
+     - `> **📖 背景知识**` for knowledgebox-equivalent content
+     - `> **⚠️ 注意**` for warningbox-equivalent content
+     - `> **💬 原始对话（时间区间）**` for dialoguebox-equivalent content
+   Use `importantbox` / 💡 for core concepts the reader must walk away with, including formal definitions, central claims, key mechanism summaries, theorem-like statements, critical algorithm steps, and compact restatements of the main idea after a dense explanation
+   Use `knowledgebox` / 📖 for background and side knowledge that improves understanding without being the main thread, including prerequisite reminders, historical lineage, engineering context, design tradeoffs, terminology comparisons, and intuition-building analogies
+   Use `warningbox` / ⚠️ for common misunderstandings and failure points, including notation overload, hidden assumptions, misleading heuristics, easy-to-make implementation mistakes, causal confusions, off-by-one style reasoning errors, and places where the speaker contrasts a wrong intuition with the correct one
+   Use `dialoguebox` / 💬 only for conversation-heavy videos when a brief original dialogue segment is high-information, funny, vivid, or especially intuitive, and preserving the speaker's wording gives the reader a stronger sense of being present in the discussion
+   a dialogue segment may contain either one exchange or several tightly connected turns, such as a question, follow-up, pushback, clarification, and answer sequence
+   keep dialogue snippets short: preserve speaker labels and a concrete timestamp or interval, lightly clean obvious ASR errors only when confident, and follow the box with prose that explains why the dialogue segment matters
+   do not use dialogue callouts for greetings, filler, long transcript dumps, or dialogue that would be clearer as ordinary summarized exposition
+   there is no quota of one callout per section; add multiple callouts in a section when the material contains multiple distinct teaching signals
+   each callout should carry a specific pedagogical payload rather than generic emphasis
+   prefer placing a callout immediately after the paragraph, derivation, or example that motivates it
+   routine exposition should stay in normal prose; callouts are for high-signal takeaways, not decoration
+   figures must stay outside all callout boxes / blockquotes
 
-10. End every major section with `\subsection{本章小结}`.
-    Add `\subsection{拓展阅读}` when there are one or two worthwhile external links.
+10. End every major section with a `### 本章小结` (Markdown) or `\subsection{本章小结}` (LaTeX).
+    Add `### 拓展阅读` (Markdown) or `\subsection{拓展阅读}` (LaTeX) when there are one or two worthwhile external links.
 
-11. End the document with a final top-level section such as `\section{总结与延伸}`.
+11. End the document with a final top-level section such as `## 总结与延伸` (Markdown) or `\section{总结与延伸}` (LaTeX).
     That final section must include:
     - the speaker's substantive closing discussion, excluding routine sign-off language
     - your own structured distillation of the core claims, mechanisms, and practical implications
     - your expanded synthesis, including conceptual compression, cross-links between sections, and any careful generalization that stays faithful to the video
     - concrete takeaways, open questions, or next steps when the material supports them
 
-12. Do not emit `[cite]`-style placeholders anywhere in the LaTeX.
+12. Do not emit `[cite]`-style placeholders anywhere in the document.
 
 ## Figure Handling
 
@@ -253,24 +294,31 @@ Whenever the `.tex` or PDF references a specific video frame, or a crop derived 
 - If several nearby frames in one figure all come from the same subtitle interval, one clear footnote is enough.
 - Keep the figure and its time footnote anchored to the same page; prefer layouts such as `[H]`, a non-floating block, or another stable placement when ordinary floats would separate them.
 
+In Markdown mode, record the time interval as an italic caption line directly below the image:
+
+```
+![图示描述](path/to/figure.png)
+
+*视频画面时间区间：00:12:31--00:12:46。若为裁剪图，时间区间仍对应原视频画面。*
+```
+
 ## Visualization
 
 For concepts that remain hard to explain with only screenshots and prose, add accurate visualizations.
 
 Two acceptable routes:
 
-- generate LaTeX-native visualizations with TikZ or PGFPlots
-- generate figures ahead of time with scripts and include them as images
+- generate LaTeX-native visualizations with TikZ or PGFPlots (LaTeX mode only)
+- generate figures ahead of time with scripts and include them as images (both modes)
 
 For script-generated illustrations, prefer Python tools such as `matplotlib` and `seaborn` when they are the clearest way to produce an accurate teaching figure.
 
-When a visualization is generated externally rather than drawn natively in LaTeX:
+When a visualization is generated externally:
 
-- export the figure as `pdf` so it can be inserted into the `.tex` without rasterization loss
-- prefer vector output for plots, charts, and schematic illustrations
-- avoid `png` or `jpg` for script-generated teaching figures unless the content is inherently raster
+- LaTeX mode: export the figure as `pdf` so it can be inserted into the `.tex` without rasterization loss; prefer vector output
+- Markdown mode: export as `png` or `svg`; `png` is more universally supported in Markdown viewers
 
-When the source material contains relationships, results, or equations that would be clearer when redrawn than when shown as a screenshot, prefer rebuilding them with LaTeX-native tools or with `matplotlib` / `seaborn`.
+When the source material contains relationships, results, or equations that would be clearer when redrawn than when shown as a screenshot, prefer rebuilding them with LaTeX-native tools (LaTeX mode) or with `matplotlib` / `seaborn` (both modes).
 
 Use visualizations for:
 
@@ -298,8 +346,10 @@ Deliver all of the following:
 - the Whisper-generated SRT subtitle file, if speech-to-text was used
 - the downloaded cover image referenced on the front page
 - any extracted or generated figure assets referenced by the document
-- the final `.tex` file and the compiled `.pdf` file (must use a reasonable Chinese filename, e.g., `[中文视频标题]_notes.tex` and `[中文视频标题]_notes.pdf`)
+- the final `.tex` file and the compiled `.pdf` file (LaTeX mode), or the final `.md` file (Markdown mode)
+  - must use a reasonable Chinese filename, e.g., `[中文视频标题]_notes.tex` and `[中文视频标题]_notes.pdf`, or `[中文视频标题]_notes.md`
 
 ## Asset
 
 - `assets/notes-template.tex`: default LaTeX template to copy and fill
+- `assets/notes-template.md`: default Markdown template to copy and fill
